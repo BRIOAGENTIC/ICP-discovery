@@ -1,8 +1,10 @@
 """FastAPI application entry point."""
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -45,6 +47,17 @@ async def unhandled(request: Request, exc: Exception):
         status_code=500,
         content={"detail": f"Internal error: {exc}"},
     )
+
+
+# Serve the static frontend files (HTML, CSS, JS)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    """Serve the main frontend website."""
+    index_path = Path("static/index.html")
+    return index_path.read_text(encoding="utf-8")
 
 
 app.include_router(api_router)
