@@ -17,7 +17,7 @@ from app.models import (
     ICPSearchResponse,
     ProfileResult,
 )
-from app.search import build_queries, cse_client
+from app.search import build_queries, tavily_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -25,8 +25,8 @@ router = APIRouter()
 
 def _to_profile(raw_item: dict, req: ICPSearchRequest) -> ProfileResult:
     title = raw_item.get("title", "")
-    snippet = raw_item.get("snippet", "")
-    url = raw_item.get("link", "") or raw_item.get("formattedUrl", "")
+    snippet = raw_item.get("content", "")
+    url = raw_item.get("url", "")
     platform = detect_platform(url)
     name = extract_name(title, snippet, platform)
     score = compute_relevance(title, snippet, req)
@@ -59,9 +59,7 @@ async def search_profiles(req: ICPSearchRequest, request: Request) -> ICPSearchR
         all_items: List[dict] = []
         for q in queries:
             try:
-                items = await cse_client.search(
-                    q, max_pages=settings.max_search_pages
-                )
+                items = await tavily_client.search(q, max_results=20)
                 all_items.extend(items)
             except Exception as e:
                 logger.error("Query %r failed: %s", q, e)
