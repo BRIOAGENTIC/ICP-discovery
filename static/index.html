@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICP Profile Finder</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --muted: #64748b;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        input, button {
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        button:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            color: var(--muted);
+            display: none;
+        }
+        .result-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary);
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .result-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        .result-url {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        .platform-badge {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .snippet {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .score {
+            font-weight: 700;
+            color: #16a34a;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 ICP Profile Finder</h1>
+        <p class="subtitle">Discover people matching your Ideal Customer Profile across the public web.</p>
+
+        <div class="card">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="industry">Industry *</label>
+                    <input type="text" id="industry" placeholder="e.g., B2B SaaS" required>
+                </div>
+                <div class="form-group">
+                    <label for="job_title">Job Title *</label>
+                    <input type="text" id="job_title" placeholder="e.g., Product Manager" required>
+                </div>
+                <div class="form-group">
+                    <label for="location">Location (Optional)</label>
+                    <input type="text" id="location" placeholder="e.g., San Francisco">
+                </div>
+                <div class="form-group">
+                    <label for="company_size">Company Size (Optional)</label>
+                    <input type="text" id="company_size" placeholder="e.g., 51-200">
+                </div>
+                <div class="form-group full-width">
+                    <label for="keywords">Keywords (Optional, comma separated)</label>
+                    <input type="text" id="keywords" placeholder="e.g., AI, developer tools">
+                </div>
+                <div class="form-group full-width">
+                    <button id="searchBtn" onclick="searchProfiles()">Search Profiles</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <h3>⏳ Searching the web... This may take a few seconds.</h3>
+        </div>
+
+        <div id="results"></div>
+
+        <div class="pagination" id="pagination" style="display:none;">
+            <button id="prevBtn" onclick="changePage(-1)">Previous</button>
+            <button id="nextBtn" onclick="changePage(1)">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+
+        async function searchProfiles() {
+            const industry = document.getElementById('industry').value;
+            const job_title = document.getElementById('job_title').value;
+            const location = document.getElementById('location').value;
+            const company_size = document.getElementById('company_size').value;
+            const keywordsStr = document.getElementById('keywords').value;
+            
+            if (!industry || !job_title) {
+                alert("Please fill in both Industry and Job Title.");
+                return;
+            }
+
+            // Show loading, hide results
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('pagination').style.display = 'none';
+
+            const keywords = keywordsStr ? keywordsStr.split(',').map(k => k.trim()) : [];
+
+            const body = {
+                industry,
+                job_title,
+                location: location || null,
+                company_size: company_size || null,
+                keywords: keywords.length > 0 ? keywords : null,
+                page: 1,
+                limit: 10
+            };
+
+            try {
+                const response = await fetch('/profiles/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                currentPage = 1;
+                renderResults(data);
+            } catch (error) {
+                document.getElementById('results').innerHTML = `<p style="color:red;">Error fetching data: ${error.message}</p>`;
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (data.results.length === 0) {
+                resultsDiv.innerHTML = '<p>No profiles found. Try broadening your search.</p>';
+                return;
+            }
+
+            let html = `<p style="color:#64748b; margin-bottom:1rem;">Found ${data.total_found} matching profiles.</p>`;
+            
+            data.results.forEach(profile => {
+                html += `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h3 class="result-name">${profile.name || 'Unknown Name'}</h3>
+                            <span class="platform-badge">${profile.source_platform}</span>
+                        </div>
+                        <a href="${profile.profile_url}" class="result-url" target="_blank">${profile.profile_url}</a>
+                        <p class="snippet">${profile.matched_snippet}</p>
+                        <p class="score">Relevance Score: ${profile.relevance_score}%</p>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+            
+            // Handle Pagination visibility
+            const paginationDiv = document.getElementById('pagination');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            paginationDiv.style.display = 'flex';
+            prevBtn.disabled = (currentPage === 1);
+            
+            const totalPages = Math.ceil(data.total_found / data.limit);
+            nextBtn.disabled = (currentPage >= totalPages);
+        }
+
+        async function changePage(direction) {
+            currentPage += direction;
+            if (currentPage < 1) currentPage = 1;
+
+            const industry = document.getElementById('industry').value;
+            const job_title = document.getElementById('job_title').value;
+            const location = document.getElementById('location').value;
+            const company_size = document.getElementById('company_size').value;
+            const keywordsStr = document.getElementById('keywords').value;
+            const keywords = keywordsStr ? keywordsStr.split(',').map(k => k.trim()) : [];
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+
+            const body = {
+                industry,
+                job_title,
+                location: location || null,
+                company_size: company_size || null,
+                keywords: keywords.length > 0 ? keywords : null,
+                page: currentPage,
+                limit: 10
+            };
+
+            try {
+                const response = await fetch('/profiles/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                renderResults(data);
+            } catch (error) {
+                document.getElementById('results').innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
