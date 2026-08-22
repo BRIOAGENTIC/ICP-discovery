@@ -10,9 +10,8 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    # Google CSE
-    google_api_key: str = ""
-    google_cse_id: str = ""
+    # Tavily
+    tavily_api_key: str = ""
 
     # Server
     app_host: str = "0.0.0.0"
@@ -28,7 +27,7 @@ class Settings(BaseSettings):
 
     # Search
     max_search_pages: int = 3
-    google_cse_timeout_seconds: float = 15.0
+    tavily_timeout_seconds: float = 15.0
 
 
 @lru_cache
