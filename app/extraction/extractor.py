@@ -1,6 +1,6 @@
 """Extract structured profile fields from title/snippet/url."""
 import re
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple 
 from urllib.parse import urlparse
 
 from app.models import ICPSearchRequest
