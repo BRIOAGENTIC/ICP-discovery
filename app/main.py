@@ -12,14 +12,14 @@ from app.api import router as api_router
 from app.config import settings
 from app.logging_conf import configure_logging
 from app.rate_limiter import limiter
-from app.search import cse_client
+from app.search import tavily_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
     yield
-    await cse_client.aclose()
+    await tavily_client.aclose()
 
 
 app = FastAPI(
@@ -27,7 +27,7 @@ app = FastAPI(
     description=(
         "Discover people matching an Ideal Customer Profile across "
         "the public web (LinkedIn, X, company team pages, directories, "
-        "personal sites, blogs). Powered by Google Custom Search JSON API."
+        "personal sites, blogs). Powered by Tavily Search API."
     ),
     version="1.0.0",
     lifespan=lifespan,
