@@ -1,54 +1,36 @@
-"""Build multiple Google CSE queries from ICP criteria."""
-from typing import List, Optional
+"""Build multiple search queries from ICP criteria for Tavily."""
+from typing import List
 
 from app.models import ICPSearchRequest
 
 
-def _quote(s: str) -> str:
-    s = s.strip()
-    return f'"{s}"' if " " in s else s
-
-
 def build_queries(req: ICPSearchRequest) -> List[str]:
-    """Return a list of distinct search queries that fan out across
-    platforms and the open web."""
-    title_q = _quote(req.job_title)
-    industry_q = _quote(req.industry)
-    loc_q = _quote(req.location) if req.location else None
-    size_q = _quote(req.company_size) if req.company_size else None
-    kw_q = " ".join(_quote(k) for k in req.keywords) if req.keywords else ""
-
-    base_parts = [title_q, industry_q]
-    if loc_q:
-        base_parts.append(loc_q)
-    if size_q:
-        base_parts.append(size_q)
-    if kw_q:
-        base_parts.append(kw_q)
-    base = " ".join(p for p in base_parts if p)
+    """Return a list of distinct natural-language search queries."""
+    title = req.job_title.strip()
+    industry = req.industry.strip()
+    location = req.location.strip() if req.location else ""
+    keywords = " ".join(k.strip() for k in req.keywords) if req.keywords else ""
 
     queries: List[str] = []
 
     # 1. LinkedIn profiles
-    q1 = f"site:linkedin.com/in {base}"
+    q1 = f"{title} {industry} {location} LinkedIn profile".strip()
     queries.append(q1)
 
     # 2. X / Twitter
-    q2 = f"site:twitter.com OR site:x.com {base}"
+    q2 = f"{title} {industry} {location} Twitter X profile".strip()
     queries.append(q2)
 
     # 3. Company team pages
-    q3 = f'{base} "team" "about"'
+    q3 = f"{title} {industry} team about page".strip()
     queries.append(q3)
 
     # 4. Open-web broad search (personal sites, directories, blogs, forums)
-    queries.append(base)
+    q4 = f"{title} {industry} {location} {keywords}".strip()
+    queries.append(q4)
 
     # 5. Crunchbase / AngelList / directories
-    q5 = (
-        f'site:crunchbase.com OR site:angel.co OR site:wellfound.com '
-        f'OR site:apollo.io {base}'
-    )
+    q5 = f"{title} {industry} founder Crunchbase AngelList Wellfound".strip()
     queries.append(q5)
 
     # De-duplicate while preserving order
